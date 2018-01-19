@@ -19,11 +19,11 @@ Algoritms::~Algoritms()
 std::vector<unsigned int> Algoritms::optimalAlgoritm()
 {
 	unsigned int size = gr->getV();
-	std::vector <unsigned int> coloringTable(size, 0);
+	std::vector <unsigned int> coloringTable(size, 0);  //Tablbe for all vertices, if coloringTable i = j, that means i-vertex is painted in j-color
 	unsigned int sPath = 1;
 	std::vector<unsigned int > retColoring;
-	do {
-		unsigned int pShPath = UINT_MAX;
+	do { 
+		unsigned int pShPath = UINT_MAX; // minimal shortest path in permutation (variation)
 		std::vector<std::vector<unsigned int>> coloredVer(colourNumber, std::vector<unsigned int>());
 		for (int i = 0; i < size; ++i) {
 			coloredVer[coloringTable[i]].push_back(i);
@@ -80,35 +80,11 @@ std::vector<unsigned int> Algoritms::approximateAlgoritm()
 	unsigned int maxPathR;
 	unsigned int maxPathC;
 	int rowSize = 1;
-	for (unsigned i = 0; i < size; ++i) {
-		for (unsigned int j = 0; j < rowSize; ++j) {
-			if (sp->getShrtsPaths()->getValue(i, j) == UINT_MAX) {
-				maxPath = UINT_MAX;
-				maxPathC = j;
-				maxPathR = i;
-			}
-			if (sp->getShrtsPaths()->getValue(i, j) > maxPath) {
-				maxPath = sp->getShrtsPaths()->getValue(i, j);
-				maxPathC = j;
-				maxPathR = i;
-			}
-		}
-		++rowSize;
-	}
-
-	sp->getShrtsPaths()->setValue(maxPathC, maxPathR, 0);
-	coloredVertices[actualCol].push_back(maxPathR);
-	coloredVertices[actualCol].push_back(maxPathC);
-	coloringTable[maxPathC] = actualCol;
-	coloringTable[maxPathR] = actualCol;
-	actualCol = ((actualCol + 1) % colourNumber);
-	colorUsedCount++;
-	colVertCount = colVertCount - 2;
-
+	
 	while (colVertCount > 0) {
 		maxPath = 0;
 
-		if (colVertCount == (colourNumber - colorUsedCount)) {
+		if (colVertCount <= (colourNumber - colorUsedCount)) {
 			for (auto it = coloringTable.begin(); it != coloringTable.end(); ++it) {
 				if (*it == UINT_MAX) {
 					*it = actualCol++;
@@ -116,7 +92,7 @@ std::vector<unsigned int> Algoritms::approximateAlgoritm()
 			}
 			break;
 		}
-
+		
 		unsigned int pickedCol = actualCol;
 		rowSize = 1;
 		for (unsigned i = 0; i < size; ++i) {
