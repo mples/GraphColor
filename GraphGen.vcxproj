@@ -102,12 +102,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AdjMatrix.cpp" />
+    <ClCompile Include="Algoritms.cpp" />
     <ClCompile Include="Graph.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ShortestPaths.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AdjMatrix.h" />
+    <ClInclude Include="Algoritms.h" />
+    <ClInclude Include="cxxopts.hpp" />
     <ClInclude Include="Graph.h" />
     <ClInclude Include="ShortestPaths.h" />
   </ItemGroup>

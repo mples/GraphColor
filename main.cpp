@@ -4,281 +4,31 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <string>
+#include <chrono>
+#include <iomanip>
+#include <math.h>
+
+
+#include "cxxopts.hpp"
 #include "Graph.h"	
 #include "ShortestPaths.h"
+#include "Algoritms.h"
 
-template<class _Tnumber, class _Titerator >
-bool next_variation
-(
-	_Titerator const& _First
-	, _Titerator const& _Last
-	, _Tnumber const& _Upper
-	, _Tnumber const& _Start = 0
-	, _Tnumber const& _Step = 1
-)
-{
-	_Titerator _Next = _First;
-	while (_Next != _Last)
-	{
-		*_Next += _Step;
-		if (*_Next < _Upper)
-		{
-			return true;
-		}
-		(*_Next) = _Start;
-		++_Next;
+#define DEF_FNAME "gengr.txt"
+
+int genGraph(unsigned int V , unsigned int E, std::string fname) {
+	srand(time(NULL));
+	std::ofstream file;
+	file.open(fname);
+	if (!file.good()) {
+		return 0;
 	}
-	return false;
-}
-
-std::vector<unsigned int> getCombinationValues(std::vector<unsigned int> comb, std::vector<unsigned int> val) {
-	std::vector<unsigned int> table;
-	for (int i = 0; i < comb.size(); ++i) {
-		if (comb[i] == 0) {
-			continue;
-		}
-		table.push_back(val[i]);
-	}
-	return table;
-}
-
-std::vector<unsigned int > optimalAlgoritm(Graph* gr, unsigned int colourNumber,ShortestPaths *sp) {
-	unsigned int size = gr->getV();
-	std::vector <unsigned int> coloringTable (size,0);
-	unsigned int sPath = 1;
-	std::vector<unsigned int > retColoring;
-	do {
-		unsigned int pShPath = UINT_MAX; 
-		std::vector<std::vector<unsigned int>> coloredVer(colourNumber, std::vector<unsigned int>());
-		for (int i = 0; i < size; ++i) { 
-			coloredVer[coloringTable[i]].push_back(i);
-		}
-		for (int i = 0; i < colourNumber; ++i) {
-			if (coloredVer[i].empty() || coloredVer[i].size() == 1) {
-				continue;
-			}
-			
-			std::vector<unsigned int> combinationVector(coloredVer[i].size(), 0);
-			combinationVector[coloredVer[i].size() - 1] = 1;
-			combinationVector[coloredVer[i].size() - 2 ] = 1;
-			unsigned int cShPath = UINT_MAX; //shortest path between vertices in 'i' colour
-			do {
-					std::vector<unsigned int > values = getCombinationValues(combinationVector, coloredVer[i]);
-					if (sp->getShrtsPaths()->getValue(values[0], values[1]) < cShPath) {
-						cShPath = sp->getShrtsPaths()->getValue(values[0], values[1]);
-					}
-						
-			} while (std::next_permutation(combinationVector.begin(), combinationVector.end()));
-
-			if (pShPath > cShPath) {
-				pShPath = cShPath;
-			}
-				
-			
-
-		}
-		
-		if (sPath <= pShPath) {
-			sPath = pShPath + 1;
-			retColoring = coloringTable;
-		}	
-		
-
-
-	} while (next_variation(coloringTable.begin(), coloringTable.end(),colourNumber));
-
-	sPath = sPath - 1;
-	std::cout << std::endl << sPath << std::endl;
-	return  retColoring;
-
-}
-
-std::vector<unsigned int > approximateAlgoritm(Graph* gr, unsigned int colourNumber, ShortestPaths *sp) {
-	unsigned int size = gr->getV();
-	std::vector <unsigned int> coloringTable(size,UINT_MAX);
-	std::vector<unsigned int > retColoring;
-	std::vector<std::vector<unsigned int>> coloredVertices(colourNumber, std::vector<unsigned int>());
-	unsigned int actualCol = 0;
-	unsigned int colVertCount = size;
-	unsigned int colorUsedCount = 0;
-
-	unsigned int maxPath = 0;
-	unsigned int maxPathR;
-	unsigned int maxPathC;
-	int rowSize = 1;
-	for (unsigned  i = 0; i < size; ++i) {
-		for (unsigned int j = 0; j < rowSize; ++j) {
-			if (sp->getShrtsPaths()->getValue(i, j) == UINT_MAX) {
-				maxPath = UINT_MAX;
-				maxPathC = j;
-				maxPathR = i;
-			}
-			if (sp->getShrtsPaths()->getValue(i, j) > maxPath) {
-				maxPath = sp->getShrtsPaths()->getValue(i, j);
-				maxPathC = j;
-				maxPathR = i;
-			}
-		}
-		++rowSize;
-	}
-
-	sp->getShrtsPaths()->setValue(maxPathC, maxPathR, 0);
-	coloredVertices[actualCol].push_back(maxPathR);
-	coloredVertices[actualCol].push_back(maxPathC);
-	coloringTable[maxPathC] = actualCol;
-	coloringTable[maxPathR] = actualCol;
-	actualCol = ((actualCol + 1) % colourNumber);
-	colorUsedCount++;
-	colVertCount = colVertCount - 2;
-
-	while(colVertCount > 0 ) {
-		maxPath = 0;
-		
-		if (colVertCount == (colourNumber - colorUsedCount)) {
-			for (auto it = coloringTable.begin(); it != coloringTable.end(); ++it) {
-				if (*it == UINT_MAX) {
-					*it = actualCol++;
-				}
-			}
-			break;
-		}
-		
-		unsigned int pickedCol = actualCol;
-		rowSize = 1;
-		for (unsigned i = 0; i < size; ++i) {
-			for (unsigned int j = 0; j < rowSize; ++j) {
-
-				if (coloringTable[i] == UINT_MAX && coloringTable[j] == UINT_MAX) {
-					if (sp->getShrtsPaths()->getValue(i, j) > maxPath) {
-						maxPath = sp->getShrtsPaths()->getValue(i, j);
-						maxPathC = j;
-						maxPathR = i;
-						pickedCol = actualCol;
-					}
-				}
-				else if(coloringTable[i] == UINT_MAX) {
-					unsigned int minPath = UINT_MAX;
-					for (auto it = coloredVertices[coloringTable[j]].begin(); it != coloredVertices[coloringTable[j]].end(); it++) {
-						if (sp->getShrtsPaths()->getValue(i, *it) < minPath) {
-							minPath = sp->getShrtsPaths()->getValue(i, *it);
-						}
-					}
-					if (minPath > maxPath) {
-						maxPath = sp->getShrtsPaths()->getValue(i, j);
-						maxPathC = j;
-						maxPathR = i;
-						pickedCol = coloringTable[j];
-					}
-				}
-				else if (coloringTable[j] == UINT_MAX) {
-					unsigned int minPath = UINT_MAX;
-					for (auto it = coloredVertices[coloringTable[i]].begin(); it != coloredVertices[coloringTable[i]].end(); it++) {
-						if (sp->getShrtsPaths()->getValue(i, *it) < minPath) {
-							minPath = sp->getShrtsPaths()->getValue(*it, j);
-						}
-					}
-					if (minPath > maxPath) {
-						maxPath = sp->getShrtsPaths()->getValue(i, j);
-						maxPathC = j;
-						maxPathR = i;
-						pickedCol = coloringTable[i];
-					}
-				}
-				else {
-					continue;
-				}
-				
-			}
-			++rowSize;
-		}
-
-		if (coloringTable[maxPathC] == UINT_MAX && coloringTable[maxPathR] == UINT_MAX) {
-			sp->getShrtsPaths()->setValue(maxPathC, maxPathR, 0);
-			coloringTable[maxPathC] = pickedCol;
-			coloringTable[maxPathR] = pickedCol;
-			coloredVertices[pickedCol].push_back(maxPathR);
-			coloredVertices[pickedCol].push_back(maxPathC);
-			actualCol = ((actualCol + 1) % colourNumber);
-			colVertCount = colVertCount - 2;
-			if (colorUsedCount != colourNumber) {
-				colorUsedCount++;
-			}
-		}
-		else if (coloringTable[maxPathC] == UINT_MAX) {
-			sp->getShrtsPaths()->setValue(maxPathC, maxPathR, 0);
-			coloringTable[maxPathC] = pickedCol;
-			coloredVertices[pickedCol].push_back(maxPathC);
-			colVertCount = colVertCount - 1;
-		}
-		else if (coloringTable[maxPathR] == UINT_MAX) {
-			sp->getShrtsPaths()->setValue(maxPathC, maxPathR, 0);
-			coloringTable[maxPathR] = pickedCol;
-			coloredVertices[pickedCol].push_back(maxPathR);
-			colVertCount = colVertCount - 1;
-		}
-	}
-
-	
-	return coloringTable;
-}
-
-unsigned int getShrtPath(unsigned int colourNumber, ShortestPaths *sp, std::vector<unsigned int> coloring) {
-	std::vector<std::vector<unsigned int>> coloredVertices(colourNumber, std::vector<unsigned int>());
-	for (unsigned int i = 0; i < coloring.size(); ++i) {
-		coloredVertices[coloring[i]].push_back(i);
-	}
-
-	unsigned int pShPath = UINT_MAX;
-	for (int i = 0; i < colourNumber; ++i) {
-		if (coloredVertices[i].empty() || coloredVertices[i].size() == 1) {
-			continue;
-		}
-
-		std::vector<unsigned int> combinationVector(coloredVertices[i].size(), 0);
-		combinationVector[coloredVertices[i].size() - 1] = 1;
-		combinationVector[coloredVertices[i].size() - 2] = 1;
-		unsigned int cShPath = UINT_MAX; //shortest path between vertices in 'i' colour
-		do {
-			std::vector<unsigned int > values = getCombinationValues(combinationVector, coloredVertices[i]);
-			if (sp->getShrtsPaths()->getValue(values[0], values[1]) < cShPath) {
-				cShPath = sp->getShrtsPaths()->getValue(values[0], values[1]);
-			}
-
-		} while (std::next_permutation(combinationVector.begin(), combinationVector.end()));
-
-		if (pShPath > cShPath) {
-			pShPath = cShPath;
-		}
-
-
-
-	}
-	return pShPath;
-}
-
-int main(int argc, char** argv) {
-
-    if(argc != 3 ){
-        std::cout << "Wrong arguments\n";
-        return 0;
-    }
-    //int V = std::atoi(argv[1]);
-    //int E = std::atoi(argv[2]);
-	int V = 7;
-	int E = 100;
-	std::cout << V << ' ' << E << std::endl;
-    srand(time(NULL));
-    std::ofstream file;
-    file.open("gengr.txt");
-    if( !file.good() ){
-        return 0;
-    }
-    file << V << ' ';
-    //file << E << ' '<< '\n';
+	file << V << ' ';
 	file << E << '\n';
 
 
-    for (int i =0; i < E ; ++i){
+	for (int i = 0; i < E; ++i) {
 		unsigned int  v1;
 		unsigned int  v2;
 		do {
@@ -286,51 +36,208 @@ int main(int argc, char** argv) {
 			v2 = std::rand() % V;
 		} while (v1 == v2);
 
-        file << v1;
-        file << ' ';
-        file << v2;
-        file << ' ';
-        file << std::rand() % 10;
-        file << '\n';
-    }
-    file.close();
-
-
-
-
-    Graph gr("gengr.txt");
-	//Graph gr("graf.txt");
-    //Graph gr("/home/mateusz/CLionProjects/GraphGen/graf.txt");
-    //std::cout << gr.loadFile("/home/mateusz/CLionProjects/GraphGen/graf.txt");
-
-    std::cout << std::endl;
-    std::cout << gr.getE() << ' ' << gr.getV() << std::endl;
-    std::cout << gr.getMatrix()->printMatrix();
-
-	std::cout << "Shortest paths" << std::endl;
-	ShortestPaths sp( &gr);
-	ShortestPaths sp2(&gr);
-	sp.calculatePaths();
-	sp2.calculatePaths();
-	std::cout << sp.getShrtsPaths()->printMatrix();
-	
-	std::vector<unsigned int > solved = optimalAlgoritm(&gr, 5, &sp);
-	for (int i = 0; i < solved.size(); ++i) {
-		std::cout << i << ' ';
-		std::cout << solved[i] << std::endl;
+		file << v1;
+		file << ' ';
+		file << v2;
+		file << ' ';
+		file << std::rand() % 100;
+		file << '\n';
 	}
-	std::cout << std::endl;
-	//std::cout << getShrtPath(5, &sp, solved);
-	std::cout << std::endl;
-	std::cout << std::endl;
-	solved = approximateAlgoritm(&gr, 5, &sp);
-	for (int i = 0; i < solved.size(); ++i) {
-		 std::cout << i << ' ';
-		 std::cout << solved[i] << std::endl;
+	file.close();
+}
+
+void firstMode(std::string f, unsigned int N) {
+
+	Algoritms alg(f, N);
+	std::cout << "Graph adjacency matrix: " << std::endl;
+	std::cout << alg.gr->getMatrix()->printMatrix() << std::endl;
+	std::cout << "Shortest Paths between all vertices:" << std::endl;
+	std::cout << alg.sp->getShrtsPaths()->printMatrix() << std::endl;
+	std::vector<unsigned int> optimalColoring = alg.optimalAlgoritm();
+	std::cout << "Optimal minimal same color path:" << alg.optimalMinPath<< std::endl;
+	for (int i = 0; i < optimalColoring.size(); ++i) {
+		std::cout << i << "->" << optimalColoring[i] << std::endl;
+	}
+	std::vector<unsigned int > approxColoring = alg.approximateAlgoritm();
+	std::cout << "Approximate minimal same color path:" << alg.approxMinPath << std::endl;
+	for (int i = 0; i < optimalColoring.size(); ++i) {
+		std::cout << i << "->" << approxColoring[i] << std::endl;
+	}
+}
+void secondMode(unsigned int V, unsigned int E, unsigned int N, std::string f) {
+	if (f.empty()) {
+		genGraph(V, E, DEF_FNAME);
+		firstMode(DEF_FNAME, N);
+	}
+	else {
+		genGraph(V, E, f);
+		firstMode(f, N);
 	}
 
-	std::cout << std::endl;
-	std::cout << getShrtPath(5,&sp2, solved);
+}
+void thirdMode(unsigned int V, unsigned int E, unsigned int N, unsigned int k, unsigned int r, unsigned int s) {
+	unsigned int nProb = V;
+	double avrTime = 0, timeCounter = 0;
+	std::vector<double> timeResultsOptimal;
+	std::vector<double> timeResultsApprox;
+	double cOptimal;
+	double cApprox;
+
+	for (int i = 0; i < k; ++i, nProb += s) {
+		avrTime = 0;
+		for (int j = 0; j < r; ++j) {
+			genGraph(nProb, E, DEF_FNAME);
+			Algoritms alg(DEF_FNAME, N);
+			auto start = std::chrono::system_clock::now();
+
+			alg.optimalAlgoritm();
+
+			auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::system_clock::now() - start);
+			timeCounter = milliseconds.count();
+			avrTime = avrTime + timeCounter;
+		}
+		avrTime = avrTime / r;
+		timeResultsOptimal.push_back(avrTime);
+		
+	}
+
+	double c3 = ((int)(k / 2)*s);
+	double c1 = std::pow((double)(V + ((int)(k / 2)*s)), (double)N);
+	double c2 = timeResultsOptimal[(int)(k / 2)];
+	cOptimal = timeResultsOptimal[(int)(k / 2)] / std::pow((double)(V + ((int)(k / 2)*s)), (double)N);
+	std::cout << cOptimal << std::endl;
+
+	nProb = V;
+	for (int i = 0; i < k; ++i, nProb += s) {
+		double t = timeResultsOptimal[i] / (cOptimal * std::pow(nProb, N));
+
+		std::cout << "| ";
+		std::cout << std::setw(8) << nProb << " | ";
+		std::cout << std::fixed << std::setprecision(3) << std::setw(8) << timeResultsOptimal[i] << " | ";
+		std::cout << std::fixed << std::setprecision(3) << std::setw(8) << t << " | ";
+		std::cout << std::endl;
+	}
+
+	//Test for approximate algoritm
+
+	nProb = V;
+	for (int i = 0; i < k; ++i, nProb += s) {
+		avrTime = 0;
+		for (int j = 0; j < r; ++j) {
+			genGraph(nProb, E, DEF_FNAME);
+			Algoritms alg(DEF_FNAME, N);
+			auto start = std::chrono::system_clock::now();
+
+			alg.approximateAlgoritm();
+
+			auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::system_clock::now() - start);
+			
+			timeCounter = milliseconds.count();
+			avrTime = avrTime + timeCounter;
+		}
+		avrTime = avrTime / r;
+		timeResultsApprox.push_back(avrTime);
+	}
+
+	cApprox = timeResultsApprox[(int)(k / 2)] / std::pow((double)(V + ((int)(k / 2)*s)), (double)N);
+	std::cout << cApprox << std::endl;
+
+	nProb = V;
+	for (int i = 0; i < k; ++i, nProb += s) {
+		double t = timeResultsApprox[i] / (cApprox * std::pow(nProb, N));
+
+		std::cout << "| ";
+		std::cout << std::setw(8) << nProb << " | ";
+		std::cout << std::fixed << std::setprecision(3) << std::setw(8) << timeResultsApprox[i] << " | ";
+		std::cout << std::fixed << std::setprecision(3) << std::setw(8) << t << " | ";
+		std::cout << std::endl;
+	}
+}
+
+int main(int argc, char** argv) {
+
+	unsigned int m, V, E, N,k,r,s;
+	std::string f;
+
+
+	try {
+		cxxopts::Options options(argv[0], " - command line options");
+		options
+			.positional_help("[optional args]")
+			.show_positional_help();
+
+		options.add_options("Program")
+			("m", "Get mode to run", cxxopts::value<int>())
+			("V, vertices", "Get number of vertices in graph", cxxopts::value<int>())
+			("E, edges", "Get number of edges in graph", cxxopts::value<int>())
+			("N, colors", "Get number of colors to paint graph", cxxopts::value<int>())
+			("f, file", "Get file name for input", cxxopts::value<std::string>())
+			("s, step", "Get step of tasks in next iterations", cxxopts::value<int>())
+			("k, kproblem", "Get number of problems ", cxxopts::value<int>())
+			("r, rinstance", "Get number of problem instantions", cxxopts::value<int>())
+			("h, help", "Print help");
+
+		
+		auto result = options.parse(argc, argv);
+
+		if (result.count("m")) {
+			m = result["m"].as<int>();
+			std::cout << "Mode "<< m << " launched" << std::endl;
+		}
+		if (result.count("N")) {
+			N = result["N"].as<int>();
+			std::cout << "N -> " << N << std::endl;
+		}
+
+		if (result.count("V")) {
+			V = result["V"].as<int>();
+			std::cout << "V -> " << V << std::endl;
+		}
+
+		if (result.count("E")) {
+			E = result["E"].as<int>();
+			std::cout << "E -> " << E << std::endl;
+		}
+		if (result.count("s")) {
+			s = result["s"].as<int>();
+			std::cout << "s -> " << s << std::endl;
+		}
+
+		if (result.count("r")) {
+			r = result["r"].as<int>();
+			std::cout << "r -> " << r << std::endl;
+		}
+
+		if (result.count("k")) {
+			k = result["k"].as<int>();
+			std::cout << "k -> " << k << std::endl;
+		}
+
+		if (result.count("f")) {
+			f = result["f"].as<std::string>();
+			std::cout << "f -> " << f << std::endl;
+		}
+	}
+	catch (const cxxopts::OptionException &e) {
+		std::cout << "Error in parsing options: " << e.what() << std::endl;
+		exit(1);
+	}
+
+	switch (m) {
+	case 1:
+		firstMode(f,N);
+		break;
+	case 2:
+		secondMode(V, E, N, f);
+		break;
+	case 3:
+		thirdMode(V,E, N, k, r,s);
+		break;
+	default:
+		break;
+	}
 
 	std::getchar();
     return 0;

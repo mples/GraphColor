@@ -6,6 +6,7 @@
 #define GRAPHGEN_GRAPH_H
 
 #include <fstream>
+#include <string>
 #include "AdjMatrix.h"
 
 class Graph {
@@ -14,11 +15,12 @@ public:
 	AdjMatrix * AdjMat;
     Graph();
     ~Graph();
-    Graph(const char* fname);
+    //Graph(const char* fname);
+	Graph(std::string fname);
     int getV();
     int getE();
     AdjMatrix* getMatrix();
-    bool loadFile(const char* fname);
+    bool loadFile(std::string fname);
 protected:
 
 private:

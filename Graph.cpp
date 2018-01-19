@@ -9,7 +9,7 @@ Graph::Graph() {
 
 }
 
-Graph::Graph(const char* fname) {
+Graph::Graph(std::string fname) {
     //adjMat = new AdjMatrix() ;
     loadFile(fname);
 }
@@ -20,7 +20,7 @@ Graph::~Graph() {
 
 }
 
-bool Graph::loadFile(const char* fname) {
+bool Graph::loadFile(std::string fname) {
 
     std::ifstream file;
     file.open(fname);
