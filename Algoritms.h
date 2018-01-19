@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GRAPHGEN_ALGORITMS_H
+#define GRAPHGEN_ALGORITMS_H
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -49,3 +50,4 @@ inline bool Algoritms::next_variation(_Titerator const & _First, _Titerator cons
 	}
 	return false;
 }
+#endif

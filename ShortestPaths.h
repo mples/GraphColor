@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GRAPHGEN_SHORTESTPATHS_H
+#define GRAPHGEN_SHORTESTPATHS_H
 #include "Graph.h"
 #include <stdint.h>
 
@@ -15,4 +16,4 @@ private:
 
 };
 
-
+#endif
